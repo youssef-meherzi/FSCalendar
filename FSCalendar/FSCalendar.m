@@ -599,13 +599,14 @@
     if (!_pagingEnabled) {
         return;
     }
-    CGFloat pannedOffset = 0, targetOffset = 0, currentOffset = 0, contentSize = 0;
+    CGFloat pannedOffset = 0, targetOffset = 0, currentOffset = 0, contentSize = 0, scrollSize = 0;
     switch (_collectionViewLayout.scrollDirection) {
         case UICollectionViewScrollDirectionHorizontal: {
             pannedOffset = [scrollView.panGestureRecognizer translationInView:scrollView].x;
             targetOffset = (*targetContentOffset).x;
             currentOffset = scrollView.contentOffset.x;
             contentSize = scrollView.fs_width;
+            scrollSize = scrollView.contentSize.width;
             break;
         }
         case UICollectionViewScrollDirectionVertical: {
@@ -613,6 +614,7 @@
             targetOffset = (*targetContentOffset).y;
             currentOffset = scrollView.contentOffset.y;
             contentSize = scrollView.fs_height;
+            scrollSize = scrollView.contentSize.height;
             break;
         }
         default: {
@@ -623,6 +625,10 @@
                                      (pannedOffset > 0 && targetOffset < currentOffset)) && _minimumDate;
     if (shouldTriggerPageChange) {
         [self willChangeValueForKey:@"currentPage"];
+        
+        if ([self isRTL])
+            targetOffset = scrollSize - targetOffset + contentSize;
+        
         switch (_scope) {
             case FSCalendarScopeMonth: {
                 _currentPage = [_minimumDate fs_dateByAddingMonths:targetOffset/contentSize].fs_dateByIgnoringTimeComponents.fs_firstDayOfMonth;
@@ -1123,10 +1129,14 @@
     switch (_scope) {
         case FSCalendarScopeMonth: {
             scrollOffset = [targetDate fs_monthsFrom:_minimumDate.fs_firstDayOfMonth];
+            if ([self isRTL])
+                scrollOffset = [_maximumDate fs_monthsFrom:_minimumDate.fs_firstDayOfMonth] - scrollOffset;
             break;
         }
         case FSCalendarScopeWeek: {
             scrollOffset = [targetDate fs_weeksFrom:_minimumDate.fs_firstDayOfWeek];
+            if ([self isRTL])
+                scrollOffset = [_maximumDate fs_weeksFrom:_minimumDate.fs_firstDayOfMonth] - scrollOffset;
             break;
         }
         default: {
@@ -1135,7 +1145,6 @@
     }
     
     if (_pagingEnabled) {
-        
         switch (_collectionViewLayout.scrollDirection) {
             case UICollectionViewScrollDirectionVertical: {
                 [_collectionView setContentOffset:CGPointMake(0, scrollOffset * _collectionView.fs_height) animated:animated];
@@ -1468,6 +1477,11 @@
         _maximumDate = [NSDate fs_dateWithYear:2099 month:12 day:31];
     }
     return _maximumDate;
+}
+
+- (BOOL)isRTL
+{
+    return [NSLocale characterDirectionForLanguage:self.locale.localeIdentifier] == NSLocaleLanguageDirectionRightToLeft;
 }
 
 @end
